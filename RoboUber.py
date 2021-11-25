@@ -22,7 +22,7 @@ worldY = 50
 runTime = 1440
 # you can change the DisplaySize to be bigger if you want larger-size objects on-screen
 displaySize = (1024,768)
-trafficOn = False
+trafficOn = True
 
 # play around with these parameters if you want, to see how they affect the results.
 # (but keep the original settings so you can return to something more-or-less 'sensible)
@@ -188,10 +188,12 @@ def runRoboUber(worldX,worldY,runTime,stop,junctions=None,streets=None,interpola
                 if t._numPayments > 0:
                     print("Average: {0}".format(t._totalPayments/t._numPayments))
             print("Dispatcher revenue: {0}".format(dispatcher0._revenue))
+            print("Fares dropped: {}".format(dispatcher0._cancelled))
             threadRunTime = 0
          else: 
             svcArea.runWorld(ticks=1, outputs=outputValues)
             # print("Times: {0}, Fares: {1}, Taxis: {2}".format(outputValues['time'], outputValues['fares'].keys(), outputValues['taxis'].keys()))
+            print("Fares dropped: {}".format(dispatcher0._cancelled))
             if threadTime != svcArea.simTime:
                threadTime += 1
             time.sleep(1)

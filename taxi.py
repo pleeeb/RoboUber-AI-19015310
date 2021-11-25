@@ -415,7 +415,7 @@ class Taxi:
       # a hint that maybe some form of CSP solver with automated reasoning might be a good way of implementing this. But
       # other methodologies could work well. For best results you will almost certainly need to use probabilistic reasoning.
       def _bidOnFare(self, time, origin, destination, price):
-          NoCurrentPassengers = self._passenger is None
+          """NoCurrentPassengers = self._passenger is None
           NoAllocatedFares = len([fare for fare in self._availableFares.values() if fare.allocated]) == 0
           TimeToOrigin = self._world.travelTime(self._loc, self._world.getNode(origin[0], origin[1]))
           TimeToDestination = self._world.travelTime(self._world.getNode(origin[0], origin[1]),
@@ -433,8 +433,73 @@ class Taxi:
           CloseEnough = CanAffordToDrive and WillArriveOnTime
           Worthwhile = PriceBetterThanCost and NotCurrentlyBooked 
           Bid = CloseEnough and Worthwhile
-          return Bid
+          return Bid"""
 
+          bet_prob = 1
+          current_allocations = [fare for fare in self._availableFares.values() if fare.allocated]
+
+          for fare in self._availableFares.items():
+            if fare[1].allocated:
+              nextdest = fare[1].destination
+
+          origin_node = self._world.getNode(origin[0], origin[1])
+          if len(current_allocations) != 0:
+              bet_prob -= len(current_allocations) * 0.05
+          travel_time = self._world.travelTime(self._loc, self._world.getNode(origin[0], origin[1]))
+          if self._passenger:
+              if len(current_allocations) > 2:
+                  bet_prob = 0
+              elif len(current_allocations) == 1:
+                  dest = self._path[-1]
+                  dest_node = self._world.getNode(dest[0], dest[1])
+                  travel_time = self._world.travelTime(dest_node,self._world.getNode(nextdest[0],nextdest[1])) + \
+                                self._world.travelTime(self._world.getNode(nextdest[0],nextdest[1]), origin_node)
+              else:
+                  dest = self._path[-1]
+                  dest_node = self._world.getNode(dest[0], dest[1])
+                  next_node = self._world.getNode(current_allocations[1].destination[0], current_allocations[1].destination[1])
+                  travel_time = self._world.travelTime(self._loc, dest_node) + self._world.travelTime(dest_node, next_node)
+          if self._account < travel_time:
+              bet_prob = 0
+          if bet_prob > 0:
+              # If roads are likely to be gridlocked
+              if self._loc.capacity > 2:
+                  bet_prob -= 0.05
+              travel_cost = ((travel_time + self._world.travelTime(origin_node, self._world.getNode(
+                  destination[0], destination[1]))) * -1) + price
+              if self._passenger:
+                  if dest_node:
+                      if dest_node.capacity > 2:
+                          bet_prob -= 0.05
+                  bet_prob -= 1 / (numpy.exp(travel_cost / 40))
+              else:
+                  bet_prob -= 0.5 / (numpy.exp(travel_cost / 40))
+              if origin_node.capacity > 2:
+                  bet_prob -= 0.05
+              if self._world.getNode(destination[0], destination[1]).capacity > 2:
+                  bet_prob -= 0.05
+              # If fare will appear closer to current/dest pos
+              bet_prob -= 1-(1/((travel_time/50)+1))
+          if bet_prob < 0:
+              bet_prob = 0
+          elif bet_prob > 1:
+              bet_prob = 1
+          n = 1-bet_prob
+          print(bet_prob)
+          choices = [True, False]
+          choice = numpy.random.choice(choices, size=1, p=[bet_prob, n])
+          return choice
+
+      # Probabilities to consider:
+      # If fare will be cancelled (based on distance) done
+      # If road is likely to be gridlocked (based on traffic) done
+      # If a fare will come up closer to current position/destination (based on popular areas / distance) basic done
+      # If taxis will intersect and get stuck (based on if fare in popular location)
+      # If can get better expected return (based on cost to travel and fare price)
+
+      # Constants:
+      # If already have fares allocated
+      # If taxi will off duty before completing fare
 
 
 

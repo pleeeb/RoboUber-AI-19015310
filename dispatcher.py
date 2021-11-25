@@ -44,6 +44,8 @@ class Dispatcher:
           self._fareBoard = {}
           # serviceMap gives the dispatcher its service area
           self._map = serviceMap
+          # Amount of cancelled fares
+          self._cancelled = 0
 
       #_________________________________________________________________________________________________________
       # methods to add objects to the Dispatcher's knowledge base
@@ -125,6 +127,7 @@ class Dispatcher:
                 if calltime in self._fareBoard[origin][destination]:
                    # get rid of it
                    print("Fare ({0},{1}) cancelled".format(origin[0],origin[1]))
+                   self._cancelled += 1
                    # inform taxis that the fare abandoned
                    self._parent.cancelFare(origin, self._taxis[self._fareBoard[origin][destination][calltime].taxi])
                    del self._fareBoard[origin][destination][calltime]
@@ -194,10 +197,48 @@ class Dispatcher:
       def _costFare(self, fare):
           timeToDestination = self._parent.travelTime(self._parent.getNode(fare.origin[0],fare.origin[1]),
                                                       self._parent.getNode(fare.destination[0],fare.destination[1]))
+
           # if the world is gridlocked, a flat fare applies.
           if timeToDestination < 0:
-             return 150
-          return (25+timeToDestination)/0.9
+              return 150
+          available = []
+          total_times = []
+          result = 10
+          for taxi in self._taxis:
+              current_allocations = [fare for fare in taxi._availableFares.values() if fare.allocated]
+              if len(current_allocations) < 2:
+                  available.append(taxi)
+              if taxi._passenger:
+                  if len(current_allocations) == 1:
+                      current = self._parent.travelTime(taxi._loc, self._parent.getNode(taxi._path[0][0], taxi._path[0][1]))
+                      current += timeToDestination
+                      total_times.append(current)
+
+                  elif len(current_allocations) == 2:
+                          current = self._parent.travelTime(taxi._loc, self._parent.getNode(taxi._path[0][0],taxi._path[0][1]))
+                          next_node = self._parent.getNode(current_allocations[1].destination[0], current_allocations[1].destination[1])
+                          next = self._parent.travelTime(self._parent.getNode(taxi._path[0][0],taxi._path[0][1]),
+                                                         next_node)
+                          current += timeToDestination + next
+
+                          total_times.append(current)
+              else:
+                  total_times.append((timeToDestination))
+          if len(available) < 2:
+              return 150
+          for time in total_times:
+              if time > timeToDestination*2:
+                  result += 7
+          expected_bids = numpy.random.randint(len(available), size=1)
+          result+=timeToDestination+(numpy.random.randint(10,15,size=1)*expected_bids)
+          return result[0]
+
+          """timeToDestination = self._parent.travelTime(self._parent.getNode(fare.origin[0], fare.origin[1]),
+                                                      self._parent.getNode(fare.destination[0], fare.destination[1]))
+          # if the world is gridlocked, a flat fare applies.
+          if timeToDestination < 0:
+              return 150
+          return (25 + timeToDestination) / 0.9"""
 
       # TODO
       # this method decides which taxi to allocate to a given fare. The algorithm here is not a fair allocation
@@ -314,6 +355,7 @@ class Dispatcher:
           # Remove allocation to all except lowest distance
           for taxiIdx in taxis:
               if taxiIdx != lowest[0]:
-                  vari[taxiIdx].remove("allocate")
+                  if "allocate" in vari[taxiIdx]:
+                    vari[taxiIdx].remove("allocate")
           return vari
      
