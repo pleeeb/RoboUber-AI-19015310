@@ -183,10 +183,13 @@ def runRoboUber(worldX,worldY,runTime,stop,junctions=None,streets=None,interpola
 
          # exit if 'q' has been pressed
          if stop.is_set():
+            # Show total amount received for each taxi and number of passengers
             for i,t in enumerate(taxis):
                 print("Taxi {0}: amount = {1}, totalpay = {2}, numpay = {3}".format(i, t._account,t._totalPayments,t._numPayments))
+                # Show average price per trip
                 if t._numPayments > 0:
                     print("Average: {0}".format(t._totalPayments/t._numPayments))
+            # Display fares dropped and dispatcher revenue
             print("Dispatcher revenue: {0}".format(dispatcher0._revenue))
             print("Fares dropped: {}".format(dispatcher0._cancelled))
             threadRunTime = 0

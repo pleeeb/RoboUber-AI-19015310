@@ -435,13 +435,15 @@ class Taxi:
           Bid = CloseEnough and Worthwhile
           return Bid"""
 
+          # Initialise probablility at 100%
           bet_prob = 1
           current_allocations = [fare for fare in self._availableFares.values() if fare.allocated]
 
           for fare in self._availableFares.items():
             if fare[1].allocated:
               nextdest = fare[1].destination
-
+          # Only bid if allocated 2 or fewer passengers currently. Calculate travel time based on current path
+          # if passenger in the taxi.
           origin_node = self._world.getNode(origin[0], origin[1])
           if len(current_allocations) != 0:
               bet_prob -= len(current_allocations) * 0.05
@@ -459,6 +461,7 @@ class Taxi:
                   dest_node = self._world.getNode(dest[0], dest[1])
                   next_node = self._world.getNode(current_allocations[1].destination[0], current_allocations[1].destination[1])
                   travel_time = self._world.travelTime(self._loc, dest_node) + self._world.travelTime(dest_node, next_node)
+          # Do not bid if taxi cannot afford the fare
           if self._account < travel_time:
               bet_prob = 0
           if bet_prob > 0:
@@ -467,6 +470,7 @@ class Taxi:
                   bet_prob -= 0.05
               travel_cost = ((travel_time + self._world.travelTime(origin_node, self._world.getNode(
                   destination[0], destination[1]))) * -1) + price
+              # Reduce probability more for the higher travel cost
               if self._passenger:
                   if dest_node:
                       if dest_node.capacity > 2:
@@ -478,8 +482,9 @@ class Taxi:
                   bet_prob -= 0.05
               if self._world.getNode(destination[0], destination[1]).capacity > 2:
                   bet_prob -= 0.05
-              # If fare will appear closer to current/dest pos
+              # lower probability if node appears further from current path destination
               bet_prob -= 1-(1/((travel_time/50)+1))
+          # Do not allow probaility to go above or below boundaries
           if bet_prob < 0:
               bet_prob = 0
           elif bet_prob > 1:
@@ -487,6 +492,7 @@ class Taxi:
           n = 1-bet_prob
           print(bet_prob)
           choices = [True, False]
+          # Choose bid or not based on probabilities
           choice = numpy.random.choice(choices, size=1, p=[bet_prob, n])
           return choice
 

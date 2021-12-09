@@ -195,6 +195,7 @@ class Dispatcher:
       '''
       # TODO - improve costing
       def _costFare(self, fare):
+          # Calculate time of fare
           timeToDestination = self._parent.travelTime(self._parent.getNode(fare.origin[0],fare.origin[1]),
                                                       self._parent.getNode(fare.destination[0],fare.destination[1]))
 
@@ -203,8 +204,11 @@ class Dispatcher:
               return 150
           available = []
           total_times = []
+          # Base payment
           result = 10
+          # Iterate through taxi list
           for taxi in self._taxis:
+              # Check if any taxis are available and if so how long remains on current fares and allocated fares
               current_allocations = [fare for fare in taxi._availableFares.values() if fare.allocated]
               if len(current_allocations) < 2:
                   available.append(taxi)
@@ -224,11 +228,14 @@ class Dispatcher:
                           total_times.append(current)
               else:
                   total_times.append((timeToDestination))
+          # Large price if no taxis have less than 2 allocations
           if len(available) < 2:
               return 150
+          # Increase fare price if taxis are large distance from fare
           for time in total_times:
               if time > timeToDestination*2:
                   result += 7
+          # Get number of expected bids and increase price between 10 and 15 depending on number of bids expected
           expected_bids = numpy.random.randint(len(available), size=1)
           result+=timeToDestination+(numpy.random.randint(10,15,size=1)*expected_bids)
           return result[0]
